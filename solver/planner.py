@@ -181,17 +181,20 @@ def solve_week(items: list[FoodItem], profile: Profile, seed: int = 0,
     avoid = tuple(avoid) if avoid is not None else tuple(profile.avoid)
     week: list[dict[str, list[FoodItem]]] = []
     week_counts: dict[str, int] = {}
+    slot_history: dict[str, list[str]] = {s: [] for s in SLOTS}
 
     for day_idx in range(7):
         day_seed = seed + day_idx
-        prev = {s: [f.code for f in week[-1][s]] for s in SLOTS} if week else None
+        # 多样性：与本周同餐位所有历史天的 code 错开（存在替代方案时）
+        prev = {s: list(codes) for s, codes in slot_history.items()} if week else None
         # 过滤全周已用满次数的单品
         exhausted = {c for c, n in week_counts.items() if n >= MAX_WEEKLY_REPEATS}
         day_items = [f for f in items if f.code not in exhausted]
         day = solve_day(day_items, profile, seed=day_seed, avoid=avoid,
                         prev_day_codes=prev)
-        for foods in day.values():
-            for f in foods:
+        for slot in SLOTS:
+            slot_history[slot].extend(f.code for f in day.get(slot, []))
+            for f in day.get(slot, []):
                 week_counts[f.code] = week_counts.get(f.code, 0) + 1
         week.append(day)
     return week

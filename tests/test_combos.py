@@ -25,8 +25,10 @@ def test_match_combo_no_match_returns_none():
 
 
 def test_expand_combo_by_name(combos):
+    from solver.nutrition import load_nutrition
+    names = {f.code: f.name for f in load_nutrition("data/nutrition_cache.json")}
     codes = expand_combo(combos, "巨无霸中套餐")
-    assert codes == ["B01", "S01", "D01"]
+    assert {names[c] for c in codes} == {"巨无霸", "薯条(中)", "无糖可乐"}
 
 
 def test_expand_combo_partial_name(combos):

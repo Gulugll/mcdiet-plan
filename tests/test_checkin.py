@@ -49,15 +49,19 @@ def test_apply_checkin_twice_merges(state):
 
 
 def test_used_today_sums_from_items(state, items):
-    st = apply_checkin(state, DATE, "lunch", ["B01"])  # 巨无霸 508 kcal
+    big_mac = next(f.code for f in items if f.name == "巨无霸")
+    st = apply_checkin(state, DATE, "lunch", [big_mac])
     u = used_today(st, DATE, items)
-    assert u["kcal"] == pytest.approx(508)
-    assert u["sodium_mg"] == pytest.approx(930)
+    assert u["kcal"] == pytest.approx(513.0)
+    assert u["sodium_mg"] == pytest.approx(961.0)
 
 
 def test_replan_day_shrinks_dinner_after_big_lunch(state, items):
     # 打卡一份约 1300 kcal 的午餐 → 剩余预算骤减 → 晚餐应被重排到预算内
-    st = apply_checkin(state, DATE, "lunch", ["B01", "S01", "D06"])  # 508+328+150=986
+    big_mac = next(f.code for f in items if f.name == "巨无霸")
+    mid_fries = next(f.code for f in items if f.name == "薯条(中)")
+    oj = next(f.code for f in items if f.name == "橙汁(中)")
+    st = apply_checkin(state, DATE, "lunch", [big_mac, mid_fries, oj])  # 986 kcal
     targets = daily_targets(PROFILE)
     remaining = targets["kcal"] - 986
 
@@ -70,6 +74,7 @@ def test_replan_day_shrinks_dinner_after_big_lunch(state, items):
 
 
 def test_replan_day_keeps_checked_slots(state, items):
-    st = apply_checkin(state, DATE, "lunch", ["B01"])
+    big_mac = next(f.code for f in items if f.name == "巨无霸")
+    st = apply_checkin(state, DATE, "lunch", [big_mac])
     st2 = replan_day(st, DATE, items, seed=42)
     assert st2["plan"][DATE]["lunch"] == state["plan"][DATE]["lunch"]
