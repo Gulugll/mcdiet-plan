@@ -25,6 +25,7 @@ N_RESTARTS = 300           # 随机重启次数
 W_KCAL = 2.0               # |热量偏差| / 100 kcal（主约束）
 W_PROTEIN = 0.3            # 蛋白缺口 / 10 g
 W_FAT = 0.3                # 脂肪缺口 / 10 g
+W_CARB = 0.3               # 碳水缺口 / 10 g
 W_SODIUM = 1.0             # 钠超标 / 100 mg
 W_REPEAT = 10.0            # 同餐内重复单品，每个
 
@@ -48,11 +49,12 @@ def totals(foods: list[FoodItem]) -> dict:
 
 
 def _slot_cost(foods: list[FoodItem], slot_kcal: float, slot_protein: float,
-               slot_fat: float, slot_sodium: float) -> float:
+               slot_fat: float, slot_sodium: float, slot_carb: float) -> float:
     t = totals(foods)
     cost = W_KCAL * abs(t["kcal"] - slot_kcal) / 100.0
     cost += W_PROTEIN * max(0.0, slot_protein - t["protein_g"]) / 10.0
     cost += W_FAT * max(0.0, slot_fat - t["fat_g"]) / 10.0
+    cost += W_CARB * max(0.0, slot_carb - t["carb_g"]) / 10.0
     cost += W_SODIUM * max(0.0, t["sodium_mg"] - slot_sodium) / 100.0
     return cost
 
@@ -124,7 +126,8 @@ def solve_day(items: list[FoodItem], profile: Profile, seed: int = 0,
         slot: (remaining_kcal * SLOT_SHARES[slot] / share_sum,
                targets["protein_g"] * SLOT_SHARES[slot] / share_sum,
                targets["fat_min_g"] * SLOT_SHARES[slot] / share_sum,
-               targets["sodium_max_mg"] * SLOT_SHARES[slot] / share_sum)
+               targets["sodium_max_mg"] * SLOT_SHARES[slot] / share_sum,
+               targets["carb_hint_g"] * SLOT_SHARES[slot] / share_sum)
         for slot in slots
     }
 

@@ -64,9 +64,10 @@ def cmd_plan(args: argparse.Namespace) -> None:
     STATE_PATH.write_text(
         json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"已生成 7 天计划 → {STATE_PATH}")
-    print(f"每日目标: {state['targets']['kcal']:.0f} kcal / "
-          f"蛋白 {state['targets']['protein_g']:.0f} g / 钠 ≤ "
-          f"{state['targets']['sodium_max_mg']:.0f} mg")
+    t = state["targets"]
+    print(f"每日目标: {t['kcal']:.0f} kcal ｜ 三大营养素: "
+          f"蛋白 {t['protein_g']:.0f}g / 脂肪 ≥{t['fat_min_g']:.0f}g / "
+          f"碳水 ~{t['carb_hint_g']:.0f}g ｜ 钠 ≤ {t['sodium_max_mg']:.0f} mg")
     print(f"下一步: python -m solver.cli render")
 
 
@@ -93,7 +94,9 @@ def cmd_checkin(args: argparse.Namespace) -> None:
         f = lookup.get(c)
         if f:
             print(f"  {c} {f.name}: {f.kcal:.0f} kcal / 钠 {f.sodium_mg:.0f} mg")
-    print(f"今日已摄入 {used['kcal']:.0f} kcal，剩余预算 {remaining:.0f} kcal，"
+    print(f"今日已摄入 {used['kcal']:.0f} kcal（蛋白 {used['protein_g']:.0f}g / "
+          f"脂肪 {used['fat_g']:.0f}g / 碳水 {used['carb_g']:.0f}g / "
+          f"钠 {used['sodium_mg']:.0f}mg），剩余预算 {remaining:.0f} kcal，"
           f"已重排未打卡餐位。")
     print(f"下一步: python -m solver.cli render")
 

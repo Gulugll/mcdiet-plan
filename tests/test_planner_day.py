@@ -52,6 +52,17 @@ def test_solve_day_deterministic_with_seed(items):
            [[f.code for f in b[s]] for s in b]
 
 
+def test_slot_cost_penalizes_carb_shortfall(items):
+    # 三大营养素之一：同热量同蛋白脂肪钠的两份食物，缺碳水的成本必须更高
+    from solver.models import FoodItem
+    from solver.planner import _slot_cost
+    hi_carb = FoodItem("T1", "高碳水", "主餐", 400, 20, 15, 50, 500, 20)
+    lo_carb = FoodItem("T2", "低碳水", "主餐", 400, 20, 15, 10, 500, 20)
+    cost_hi = _slot_cost([hi_carb], 400, 20, 15, 500, 200)
+    cost_lo = _slot_cost([lo_carb], 400, 20, 15, 500, 200)
+    assert cost_lo > cost_hi
+
+
 def test_solve_day_avoid_repeats_previous_day_lunch(items):
     day1 = solve_day(items, PROFILE, seed=42)
     prev = {s: [f.code for f in foods] for s, foods in day1.items()}
