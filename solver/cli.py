@@ -76,6 +76,15 @@ def cmd_checkin(args: argparse.Namespace) -> None:
     profile = Profile(**state["profile"])
     items = load_nutrition(DATA_PATH)
 
+    if args.combo:
+        from solver.combos import expand_combo, load_combos
+        codes = expand_combo(load_combos(), args.combo)
+        if not codes:
+            sys.exit(f"未知套餐: {args.combo}")
+        args.codes = codes
+
+    if not args.codes and not args.combo:
+        sys.exit("需要 --codes 或 --combo 之一")
     state = apply_checkin(state, args.date, args.slot, args.codes)
     if args.weight:
         state["weight_log"][args.date] = args.weight
@@ -99,6 +108,37 @@ def cmd_checkin(args: argparse.Namespace) -> None:
           f"钠 {used['sodium_mg']:.0f}mg），剩余预算 {remaining:.0f} kcal，"
           f"已重排未打卡餐位。")
     print(f"下一步: python -m solver.cli render")
+
+
+def cmd_order(args: argparse.Namespace) -> None:
+    """点餐快捷方式：把计划中某餐翻译成下单 payload，供 AI 调 MCP create-order。"""
+    from solver.combos import load_combos, match_combo
+
+    state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    items = load_nutrition(DATA_PATH)
+    lookup = {i.code: i for i in items}
+
+    day = state["plan"].get(args.date)
+    if not day or not day.get(args.slot):
+        sys.exit(f"{args.date} {args.slot} 没有计划内容，先执行 plan")
+    foods = day[args.slot]
+    codes = [f["code"] if isinstance(f, dict) else f for f in foods]
+    combo_name = match_combo(load_combos(), codes)
+
+    names = [lookup[c].name if c in lookup else c for c in codes]
+    print(f"下单内容（{args.date} {SLOT_NAMES[args.slot]}）: {', '.join(names)}")
+    if combo_name:
+        print(f"匹配套餐: {combo_name}")
+    else:
+        print("未匹配预设套餐（单品组合下单）")
+    payload = {
+        "store": args.store or "<由 AI 调 query-nearby-stores 选择>",
+        "order_type": args.mode,
+        "items": [{"code": c, "name": n, "qty": 1} for c, n in zip(codes, names)],
+        "source": "mcdiet-plan",
+    }
+    print("\nMCP create-order payload（AI 侧翻译为真实 create-order 参数）：")
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 def cmd_render(args: argparse.Namespace) -> None:
@@ -133,10 +173,19 @@ def build_parser() -> argparse.ArgumentParser:
     ck_p = sub.add_parser("checkin", help="打卡并重排")
     ck_p.add_argument("--date", required=True)
     ck_p.add_argument("--slot", required=True, choices=SLOTS)
-    ck_p.add_argument("--codes", nargs="+", required=True)
+    ck_p.add_argument("--codes", nargs="*", default=None)
+    ck_p.add_argument("--combo", default=None, help="按套餐名打卡，如: 巨无霸中套餐")
     ck_p.add_argument("--weight", type=float, default=None, help="当日晨重 kg")
     ck_p.add_argument("--seed", type=int, default=42)
     ck_p.set_defaults(func=cmd_checkin)
+
+    or_p = sub.add_parser("order", help="点餐快捷方式：输出某餐的下单 payload")
+    or_p.add_argument("--date", required=True)
+    or_p.add_argument("--slot", required=True, choices=SLOTS)
+    or_p.add_argument("--store", default="", help="门店名/ID（留空则由 AI 调 MCP query-nearby-stores 选择）")
+    or_p.add_argument("--mode", default="carryout", choices=["carryout", "delivery"],
+                      help="就餐方式: carryout 到店取餐 / delivery 外送")
+    or_p.set_defaults(func=cmd_order)
 
     rd_p = sub.add_parser("render", help="渲染网页")
     rd_p.add_argument("--state", default=None)

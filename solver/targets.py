@@ -13,11 +13,12 @@ ACTIVITY_FACTORS = {
 
 GOAL_FACTOR = {"cut": 0.85, "maintain": 1.0, "bulk": 1.10}
 
-PROTEIN_G_PER_KG = {"cut": 1.6, "maintain": 1.4, "bulk": 1.8}
+PROTEIN_G_PER_KG = {"cut": 2.0, "maintain": 1.4, "bulk": 1.8}
 
 MIN_KCAL = 1200.0
 SODIUM_MAX_MG = 2300.0
 MIN_FAT_PCT = 0.20  # 脂肪供能占比下限
+MAX_FAT_PCT = 0.30  # 脂肪供能占比上限（减脂向）
 
 
 def bmr(profile: Profile) -> float:
@@ -36,10 +37,12 @@ def daily_targets(profile: Profile) -> dict:
     kcal = max(tdee(profile) * GOAL_FACTOR[profile.goal], MIN_KCAL)
     protein_g = profile.weight_kg * PROTEIN_G_PER_KG[profile.goal]
     fat_min_g = kcal * MIN_FAT_PCT / 9.0
+    fat_max_g = kcal * MAX_FAT_PCT / 9.0
     return {
         "kcal": kcal,
         "protein_g": protein_g,
         "fat_min_g": fat_min_g,
+        "fat_max_g": fat_max_g,
         "carb_hint_g": (kcal - protein_g * 4 - fat_min_g * 9) / 4.0,
         "sodium_max_mg": SODIUM_MAX_MG,
     }

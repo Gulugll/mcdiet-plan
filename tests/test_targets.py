@@ -45,10 +45,18 @@ def test_bulk_target_is_10pct_above_tdee():
 
 
 def test_protein_gram_target_for_cut():
-    # 减脂 1.6 g/kg → 72 * 1.6 = 115.2
+    # 健身向：减脂 2.0 g/kg → 72 * 2.0 = 144
     p = Profile(gender="M", age=28, height_cm=175, weight_kg=72, goal="cut")
     t = daily_targets(p)
-    assert t["protein_g"] == pytest.approx(115.2)
+    assert t["protein_g"] == pytest.approx(144.0)
+
+
+def test_fat_upper_bound_present():
+    # 脂肪上限 = 30% 供能：1962*1.077... 具体值按目标热量算，占位断言键存在且为正
+    p = Profile(gender="M", age=28, height_cm=175, weight_kg=72, goal="cut")
+    t = daily_targets(p)
+    assert t["fat_max_g"] == pytest.approx(t["kcal"] * 0.30 / 9.0)
+    assert t["fat_max_g"] > t["fat_min_g"]
 
 
 def test_sodium_cap_present():

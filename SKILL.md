@@ -36,18 +36,32 @@ description: 麦门膳食师——一周只吃麦当劳的营养规划挑战。�
 
 ## 工作流 B：每日打卡与动态重排
 
-1. 用户说"打卡：中午吃了麦辣鸡腿堡套餐"时，将描述匹配到缓存中的餐品 code
-   （如 `B03`；套餐按 主堡+小食+饮料 拆分）。匹配不上就列出相近单品让用户确认。
+1. 用户说"打卡：中午吃了麦辣鸡腿堡套餐"时，先用套餐名展开（`data/combos.json`，
+   如"麦辣鸡腿堡套餐"→ B03+S01+D01），匹配不到预设套餐再按单品模糊匹配营养库。
 2. 运行：
    ```
-   python -m solver.cli checkin --date 2026-10-12 --slot lunch --codes B03 S01 D01
+   python -m solver.cli checkin --date 2026-10-12 --slot lunch --combo 麦辣鸡腿堡中套餐
+   # 或按单品：--codes B03 S01 D01
    ```
    用户报了晨重就加 `--weight 71.8`。
-3. 命令输出会给出**今日剩余热量预算**，并自动重排未打卡餐位。
+3. 命令输出会给出**今日剩余热量预算**与三大营养素摄入，并自动重排未打卡餐位。
 4. 重新 `render` 并展示网页，用一句话总结："今天还剩 X kcal，晚餐推荐…"。
 5. 第 7 天全部打卡后，引导用户查看网页底部的总结图表（体重曲线、达标率）。
 
-## 工作流 C：MCP 数据刷新（可选，需 Token）
+## 工作流 C：一键点餐（需 MCP Token）
+
+1. 用户说"帮我把明天的午餐点了"时，运行：
+   ```
+   python -m solver.cli order --date 2026-10-13 --slot lunch --mode carryout
+   ```
+   输出该餐的下单内容（含匹配套餐名）与 MCP create-order payload。
+2. AI 侧流程：`query-nearby-stores` 选门店（payload 中 store 为空时）→
+   `query-meals`/`query-meal-detail` 核对可售与套餐组成 → `calculate-price`（可先
+   `auto-bind-coupons` 领券）→ `create-order` → 把支付链接给用户。
+3. 用户要取消：`cancel-order`；查进度：`query-order`。
+4. 下单前必须把完整订单内容复述给用户确认，确认后才调 create-order。
+
+## 工作流 D：MCP 数据刷新（可选，需 Token）
 
 - `list-nutrition-foods`：拉取营养数据 → 与 `data/nutrition_cache.json` 合并
   （同 code 以 MCP 为准，本地人工补充表用于补缺）。

@@ -58,9 +58,20 @@ def test_slot_cost_penalizes_carb_shortfall(items):
     from solver.planner import _slot_cost
     hi_carb = FoodItem("T1", "高碳水", "主餐", 400, 20, 15, 50, 500, 20)
     lo_carb = FoodItem("T2", "低碳水", "主餐", 400, 20, 15, 10, 500, 20)
-    cost_hi = _slot_cost([hi_carb], 400, 20, 15, 500, 200)
-    cost_lo = _slot_cost([lo_carb], 400, 20, 15, 500, 200)
+    cost_hi = _slot_cost([hi_carb], 400, 20, 15, 66, 500, 200)
+    cost_lo = _slot_cost([lo_carb], 400, 20, 15, 66, 500, 200)
     assert cost_lo > cost_hi
+
+
+def test_slot_cost_penalizes_fat_excess(items):
+    # 脂肪上限约束：同热量下脂肪超限的组合成本必须更高
+    from solver.models import FoodItem
+    from solver.planner import _slot_cost
+    lean = FoodItem("T3", "低脂", "主餐", 400, 30, 10, 45, 500, 20)
+    fatty = FoodItem("T4", "高脂", "主餐", 400, 30, 30, 25, 500, 20)
+    cost_lean = _slot_cost([lean], 400, 30, 5, 15, 500, 200)
+    cost_fatty = _slot_cost([fatty], 400, 30, 5, 15, 500, 200)
+    assert cost_fatty > cost_lean
 
 
 def test_solve_day_avoid_repeats_previous_day_lunch(items):
